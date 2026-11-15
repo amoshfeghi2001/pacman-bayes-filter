@@ -1,43 +1,189 @@
-# Project 1 - Bayes Filter
+# Pacman Bayes Filter — Intelligent Ghost Tracking
 
-## Deliverables
+**INFO8006 — Introduction to Artificial Intelligence | Project 1**
 
-You are requested to deliver:
-- A file named `bayesfilter.py` containing your implementation of the Bayes filter algorithm and the agent eating ghosts. Simply modify the provided `bayesfilter.py` file.
+A Python-based artificial intelligence project that uses **Bayesian Filtering** to track invisible ghosts in Pacman and **Breadth-First Search (BFS)** to navigate the maze and catch them efficiently.
 
-## Instructions
+## Project Overview
 
-In this project, Pacman got tired of ghosts wandering around him, so he bought a magic gun that make the ghosts edible. But while he shot them, he figured out that the gun also made them invisible. Fortunately, he also got his hands on a rusty distance sensor. The sensor returns a noisy Manhattan distance between pacman and each ghost, which Pacman can use as evidence to find the ghost positions. The noisy distance, denoted $e$, results from the addition of noise to the true Manhattan distance, the noise being sampled from a binomial distribution centered around 0. 
+In this version of Pacman, ghosts are invisible, and their exact positions are unknown. Pacman receives noisy distance measurements from a sensor instead of directly observing the ghosts.
 
-$$e = \text{ManhattanDistance}(\text{Pacman}, \text{Ghost}) + z - np \qquad z \sim \text{Binom}(n, p),$$
+The objective is to build an intelligent agent that can estimate ghost positions, update its beliefs as new information becomes available, and decide where to move.
 
-where $n=4$ and $p=0.5$.
+This project combines **probabilistic reasoning, state estimation, and pathfinding**.
 
-Pacman knows that the ghosts are afraid of him and are more likely to take actions that makes it move away from him. Their exact action policy of the ghosts (`afraid`, `fearless` and `terrified`) should be deducted from the [ghostAgents.py](pacman_module/ghostAgents.py) file.
+## Key Features
 
-Your task is to design an intelligent agent based on the Bayes filter algorithm (see [Lecture 6](https://glouppe.github.io/info8006-introduction-to-ai/?p=lecture6.md)) for locating and eating all the ghosts in the maze.
+- **Bayesian Filtering:** Estimates ghost locations using movement predictions and sensor observations.
+- **Transition Model:** Calculates ghost movement probabilities based on their behavior and Pacman's location.
+- **Observation Model:** Handles uncertainty in Manhattan distance measurements.
+- **Belief Updates:** Combines predicted positions with sensor evidence.
+- **BFS Pathfinding:** Finds shortest paths through the maze.
+- **Ghost Tracking:** Supports multiple invisible ghosts and different movement behaviors.
 
-1. Implement the **Bayes filter** algorithm to compute Pacman's belief state of the ghost positions. To do so, fill in the three methods `transition_matrix`, `observation_matrix` and `update` of the `BeliefStateAgent` class. `update` must rely on `transition_matrix` and `observation_matrix`.
-2. Implement a Pacman agent whose goal is to eat all the ghosts as fast as possible. However, at each step, the agent only has access to its own position and the current belief state of the ghost positions. To do so, fill in the `_get_action` method of the `PacmanAgent` class.
+## How It Works
 
-To get started, download and extract the [archive](../project1.zip?raw=true) of the project in the directory of your choice. Use the following command to run your Bayes filter implementation against a single `afraid` ghost in the `large_filter` layout:
-```console
-$ uv run python run.py --ghost afraid --nghosts 1 --layout large_filter --seed 42
+### 1. Transition Model
+
+The `transition_matrix()` function predicts where a ghost may move next.
+
+The model considers available directions, walls, Pacman's position, and the ghost's movement behavior.
+
+Three ghost behaviors are supported:
+
+| Ghost Type | Behavior |
+|---|---|
+| Fearless | Does not prefer moving away from Pacman |
+| Afraid | Prefers moving away from Pacman |
+| Terrified | Has a stronger preference for moving away |
+
+### 2. Observation Model
+
+The `observation_matrix()` function calculates the probability of receiving a noisy distance measurement for each possible ghost position.
+
+The sensor uses Manhattan distance with noise drawn from a binomial distribution:
+
+\[
+e=d_{\text{Manhattan}}+z-2
+\]
+
+where \(z\sim\operatorname{Binomial}(4,0.5)\).
+
+### 3. Bayesian Belief Update
+
+The `update()` function combines the transition and observation models.
+
+It performs two main operations:
+
+1. **Prediction:** Estimate possible new ghost locations from the previous belief state.
+2. **Correction:** Update those probabilities using the latest sensor measurement.
+
+The resulting belief distribution is normalized so that its probabilities sum to one.
+
+### 4. Pacman Movement Strategy
+
+The `PacmanAgent` uses Breadth-First Search (BFS) to explore reachable positions and determine shortest-path distances.
+
+The controller combines the belief distributions of uneaten ghosts and scores candidate destinations using:
+
+\[
+\text{Target Score}=\frac{\text{Combined Ghost Belief}}{\text{Path Distance}+1}
+\]
+
+Pacman follows the first step of the shortest path toward the selected destination. The strategy is recalculated as new observations arrive.
+
+## Technologies
+
+- Python 3.10+
+- NumPy
+- Bayesian Filtering
+- Breadth-First Search (BFS)
+- Manhattan Distance
+- Git and GitHub
+- uv for Python environment management
+
+## Installation
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/amoshfeghi2001/pacman-bayes-filter.git
+cd pacman-bayes-filter
 ```
-When several ghosts are present in the maze, they all run the same policy (e.g. all `afraid`). The random seed of the game can be changed with the `--seed` option.
 
-## Evaluation
-Your project will be evaluated based on the correctness of each of the components (transition_matrix function, observation_matrix function, update (bayes filter) function and pacman controller) and code style. To avoid error propagation, your update function will be evaluated while coupled with our own implementation of transition_matrix and observation_matrix functions. That way any error in the transition_matrix and observation_matrix functions will not impact the correctness of your update function.
+### 2. Install dependencies
 
-Your project will be evaluated as follow:
+Install [uv](https://docs.astral.sh/uv/) if it is not already available.
 
-- **transition_matrix function** : We evaluate the correctness of the component.
-- **observation_matrix function** : We evaluate the correctness of the component.
-- **update function** : We evaluate the correctness of the component.
-- **Pacman controller** : We evaluate whether your agent is able to eat 3 ghosts in a reasonable amount of time. For this test, your score for each layout and ghost type falls into one of the following four ranges:
-    - Below 500 → the score is far too low and incurs the full penalty.
-    - 500-700 → the score is below expectations and receives a smaller, half penalty.
-    - 700-900 → the remaining penalty decreases linearly as the score approaches 900.
-    - 900 or higher → full credit is awarded with no penalty.
+Then run:
 
-- **Code style** : You are awarded the maximal grade if your code is PEP-8 compliant and no points otherwise. This test is public.
+```bash
+uv sync
+```
+
+## Running the Project
+
+### Basic Simulation
+
+Run Pacman against one afraid ghost:
+
+```bash
+uv run python run.py --ghost afraid --nghosts 1 --layout large_filter --seed 42
+```
+
+### Multiple Ghosts
+
+Run a game with three terrified ghosts:
+
+```bash
+uv run python run.py --ghost terrified --nghosts 3 --layout large_filter --seed 42
+```
+
+### Maze with Walls
+
+```bash
+uv run python run.py --ghost afraid --nghosts 3 --layout large_filter_walls --seed 42
+```
+
+### Make Ghosts Visible
+
+For debugging and observing ghost behavior:
+
+```bash
+uv run python run.py --ghost afraid --nghosts 3 --layout large_filter --visible
+```
+
+### Run Without Graphics
+
+```bash
+uv run python run.py --ghost fearless --nghosts 3 --layout large_filter --nographics
+```
+
+## Project Structure
+
+```text
+pacman-bayes-filter/
+├── bayesfilter.py          # Bayesian filter and Pacman agent
+├── run.py                  # Game execution script
+├── pacman_module/          # Pacman environment
+│   ├── ghostAgents.py      # Ghost movement policies
+│   ├── game.py             # Game utilities
+│   └── layouts/            # Maze configurations
+├── test_observation.py     # Observation model tests
+├── test_update.py          # Belief update tests
+├── pyproject.toml          # Project configuration
+├── uv.lock                 # Dependency lock file
+└── README.md               # Project documentation
+```
+
+## Implementation Details
+
+The main implementation is located in **`bayesfilter.py`**, which contains:
+
+**BeliefStateAgent**
+- `transition_matrix()`
+- `observation_matrix()`
+- `update()`
+
+**PacmanAgent**
+- `_get_action()`
+
+The project uses probabilistic inference to estimate hidden ghost locations and a heuristic pathfinding controller to pursue them.
+
+## Educational Objectives
+
+This project demonstrates how an intelligent agent can:
+
+- Make decisions with incomplete information.
+- Represent uncertainty using probability distributions.
+- Combine predictions with noisy observations.
+- Track moving targets in a dynamic environment.
+- Use graph search for navigation and planning.
+
+## Academic Context
+
+Developed as part of **INFO8006 — Introduction to Artificial Intelligence, Project 1**.
+
+The project builds upon the Pacman environment provided for the course.
+
+**GitHub:** [amoshfeghi2001](https://github.com/amoshfeghi2001)
